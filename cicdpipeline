@@ -24,19 +24,22 @@ pipeline {
         stage('Deploy') {
             steps {
                 withCredentials([usernamePassword(credentialsId: 'nexusCredentials', usernameVariable: 'NEXUS_USERNAME', passwordVariable: 'NEXUS_PASSWORD')]) {
-                    sh """
-                        mvn deploy -Dmaven.test.skip=true \
-                        -DaltDeploymentRepository=thirdparty::default::http://vbahintprdnbh:8081/nexus/content/repositories/thirdparty/ \
-                        --settings <(echo "<settings>
+                    script {
+                        // Create a temporary settings.xml file
+                        writeFile file: 'settings.xml', text: """
+                        <settings>
                           <servers>
                             <server>
                               <id>thirdparty</id>
-                              <username>\$NEXUS_USERNAME</username>
-                              <password>\$NEXUS_PASSWORD</password>
+                              <username>${NEXUS_USERNAME}</username>
+                              <password>${NEXUS_PASSWORD}</password>
                             </server>
                           </servers>
-                        </settings>")
-                    """
+                        </settings>
+                        """
+                        // Run Maven deploy using the temporary settings.xml
+                        sh 'mvn deploy -Dmaven.test.skip=true -DaltDeploymentRepository=thirdparty::default::http://vbahintprdnbh:8081/nexus/content/repositories/thirdparty/ --settings settings.xml'
+                    }
                 }
             }
         }
